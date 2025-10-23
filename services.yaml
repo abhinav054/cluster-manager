@@ -1,0 +1,35 @@
+apiVersion: vi
+kind: ClusterServices
+
+metadata:
+  cluster: callmatic-3
+  region: ap-south-1
+  version: "1.33"
+  git:
+    key_path: testpod
+
+namespaces:
+  - name: test
+    services:
+      - name: nginx
+        type: service
+        container: docker
+        commit: "latest"
+        repo: ""
+        branch: ""
+        cmd: ""
+        buildCmd: ""
+        envs:
+        - "test.env"
+        mem_requests: ""
+        mem_limits: ""
+        cpu_requests: ""
+        cpu_limit: ""
+        pod_requests: ""
+        pod_limits: ""
+        public_lb: ""
+        sourceRanges: []
+        exposePort: 80
+        servicePort: 80
+
+        
