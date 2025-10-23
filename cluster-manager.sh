@@ -99,11 +99,16 @@ delete-service(){
         esac
     done
 
-    helm uninstall "${name}-${namespace}" --namespace "$namespace"
+    cluster=$(yq " .metadata.cluster " "$config_file")
+    region=$(yq " .metadata.region " "$config_file")
 
-    kubectl delete configmap "${name}-${namespace}" --namespace "$namespace"
+    set_kubeconfig "$cluster" "$region"
 
-    echo "service $name deleted !!!"
+    helm uninstall "${service}-${namespace}" --namespace "$namespace"
+
+    kubectl delete configmap "${service}-${namespace}" --namespace "$namespace"
+
+    echo "service $service deleted !!!"
 
 }
 
