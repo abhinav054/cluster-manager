@@ -2,12 +2,24 @@
 
 set -eou pipefail
 
-GIT_USERNAME="${1:-}"
-GIT_EMAIL="${2:-}"
-KEY_NAME="${3:-}"
+
+config_file="$1"
+
+GIT_USERNAME=$(yq " .metadata.git.username " "$config_file")
+GIT_EMAIL=$(yq " .metadata.git.email " "$config_file")
+KEY_NAME=$(yq " .metadata.git.key_path " "$config_file")
 
 SSH_DIR="$HOME/.ssh"
 CONFIG_DIR="/root/config"
+
+mkdir -p "$SSH_DIR"
+
+if [[ ! -f "${CONFIG_DIR}/${KEY_NAME}" ]]; then
+
+    echo "Git key file not found ..."
+    exit 1
+
+fi
 
 cat "${CONFIG_DIR}/${KEY_NAME}" > "$HOME/.ssh/id_rsa"
 

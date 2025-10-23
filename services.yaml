@@ -7,6 +7,8 @@ metadata:
   version: "1.33"
   git:
     key_path: testpod
+    username: abhinav054
+    email: abhinav054@gmail.com
 
 namespaces:
   - name: test
@@ -15,20 +17,20 @@ namespaces:
         type: service
         container: docker
         commit: "latest"
-        repo: ""
-        branch: ""
+        repo: "git@github.com:abhinav054/testpod.git"
+        branch: "main"
         cmd: ""
         buildCmd: ""
         envs:
         - "test.env"
-        mem_requests: ""
-        mem_limits: ""
-        cpu_requests: ""
-        cpu_limit: ""
-        pod_requests: ""
-        pod_limits: ""
-        public_lb: ""
-        sourceRanges: []
+        mem_requests: "128Mi"
+        mem_limits: "128Mi"
+        cpu_requests: 0.5
+        cpu_limits: 0.5
+        pod_requests: 1
+        pod_limits: 1
+        public_lb: true
+        sourceRanges: ""
         exposePort: 80
         servicePort: 80
 

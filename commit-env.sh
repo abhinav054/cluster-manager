@@ -1,19 +1,15 @@
 #!/bin/bash
 set -eou pipefail
 
-# Usage: ./merge-env-to-configmap.sh <yaml_file> <configmap_name> <namespace>
+# Usage: ./merge-env-to-configmap.sh <config_file> <configmap_name> <namespace>
 # Example: ./merge-env-to-configmap.sh config.yaml my-configmap default
 
-CONFIG_DIR="/app/config"
+CONFIG_DIR="/root/config"
 
-yaml_file="$1"
+config_file="$1"
 name="$2"
 namespace="$3"
 
-if [[ -z "$yaml_file" || -z "$configmap_name" || -z "$namespace" ]]; then
-  echo "Usage: $0 <yaml_file> <configmap_name> <namespace>"
-  exit 1
-fi
 
 if ! command -v yq >/dev/null 2>&1; then
   echo "Error: yq not installed"
@@ -23,17 +19,19 @@ fi
 tmp_env="/tmp/merged_env_$$.env"
 > "$tmp_env"
 
-echo "Extracting env files from $yaml_file..."
-env_files=$($(name_y=$name namespace_y=$namespace yq " .namespaces[] | select( .name == strenv(namespace_y) ) | .services[] | select( .name == strenv(name_y)) | .envs[] "  "$yaml_file"))
+echo "Extracting env files from $config_file..."
+env_files=$(name_y=$name namespace_y=$namespace yq " .namespaces[] | select( .name == strenv(namespace_y) ) | .services[] | select( .name == strenv(name_y)) | .envs[] "  "$config_file")
 
-if [[ -z "$env_files" ]]; then
+if [ -z "$env_files" ]; then
   echo "No env files found in YAML."
   exit 1
+else
+  echo "Env file found $env_files"
 fi
 
 echo "Merging environment variables..."
 for f in $env_files; do
-  if [[ ! -f "${CONFIG_DIR}/${f}" ]]; then
+  if [ ! -f "${CONFIG_DIR}/${f}" ]; then
     echo "Warning: env file $f not found, skipping..."
     continue
   fi
@@ -48,11 +46,11 @@ done
 
 echo "Creating/Updating ConfigMap '${name}-${namespace}' in namespace '$namespace'..."
 kubectl create configmap "${name}-${namespace}" \
-  --from-env-file="$merged_env" \
+  --from-env-file="$tmp_env" \
   -n "$namespace" \
   --dry-run=client -o yaml | kubectl apply -f -
 
 echo "✅ ConfigMap '${name}-${namespace}' updated successfully."
 
 # Cleanup
-rm -f "$tmp_env" "$merged_env"
+rm -f "$tmp_env"

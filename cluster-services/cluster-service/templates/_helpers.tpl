@@ -48,6 +48,7 @@ Selector labels
 {{- define "cluster-service.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "cluster-service.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
+cluster-manager-deploymenthash: {{ .Values.deploymentHash | trunc 63 | trimSuffix "-"}}
 {{- end }}
 
 {{/*

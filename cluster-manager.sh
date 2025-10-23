@@ -1,7 +1,9 @@
 #!/bin/bash
 
-set -euo pipefai
+set -euo pipefail
 
+
+CONFIG_DIR="/root/config"
 
 set_kubeconfig() {
     local cluster_name="$1"
@@ -37,13 +39,81 @@ set_kubeconfig() {
 }
 
 
+get-services(){
+
+    config_file=""
+    namespace=""
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -f)
+                config_file="${CONFIG_DIR}/${2}"
+                shift 2
+                ;;
+            -n)
+                namespace="$2"
+                shift 2
+                ;;
+            *)
+                echo "Unknown option: $1"
+                exit 1
+                ;;
+        esac
+    done
+
+    cluster=$(yq " .metadata.cluster " "$config_file")
+    region=$(yq " .metadata.region " "$config_file")
+
+    set_kubeconfig "$cluster" "$region"
+
+    kubectl get svc -n "$namespace"
+
+}
+
+
+delete-service(){
+
+    config_file=""
+    namespace=""
+    service=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -f)
+                config_file="${CONFIG_DIR}/${2}"
+                shift 2
+                ;;
+            -n)
+                namespace="$2"
+                shift 2
+                ;;
+            -s)
+                service="$2"
+                shift 2
+               ;;
+            *)
+                echo "Unknown option: $1"
+                exit 1
+                ;;
+        esac
+    done
+
+    helm uninstall "${name}-${namespace}" --namespace "$namespace"
+
+    kubectl delete configmap "${name}-${namespace}" --namespace "$namespace"
+
+    echo "service $name deleted !!!"
+
+}
 
 apply-service(){
 
 
     config_file=""
-    name=""
+    namespace=""
     service=""
+    DRY_RUN="false"
 
     BUILD_CMD="/app/build-and-push.sh"
 
@@ -55,16 +125,23 @@ apply-service(){
     while [[ $# -gt 0 ]]; do
         case "$1" in
             -f)
-                config_file="$2"
+                config_file="${CONFIG_DIR}/${2}"
                 shift 2
                 ;;
             -n)
-                name="$2"
+                namespace="$2"
                 shift 2
                 ;;
             -s)
                 service="$2"
                 shift 2
+                ;;
+            --dry-run)
+                if [ -n "$2" && "$2" != -*  ]; then
+                    DRY_RUN="$2"
+                else
+                    DRY_RUN="true"
+                fi
                 ;;
             *)
                 echo "Unknown option: $1"
@@ -74,15 +151,30 @@ apply-service(){
     done
 
     echo "Config file: $config_file"
-    echo "Name: $name"
+    echo "Name: $namespace"
     echo "Service: $service"
-    
-    sh "$BUILD_CMD" "$config_file" "$name" "$namespace"
-    sh "$COMMIT_ENVS_CMD" "$config_file" "$name" "$namespace"
-    sh "$MODIFY_VAL_CMD" "$config_file" "$name" "$namespace"
-    # Print parsed values
-    
 
+    cluster=$(yq " .metadata.cluster " "$config_file")
+    region=$(yq " .metadata.region " "$config_file")
+
+    set_kubeconfig "$cluster" "$region"
+
+    sh "$BUILD_CMD" "$config_file" "$service" "$namespace"
+    sh "$COMMIT_ENVS_CMD" "$config_file" "$service" "$namespace"
+    sh "$MODIFY_VAL_CMD" "$config_file" "$service" "$namespace"
+
+
+    if [ "$DRY_RUN" = "false" ]; then
+        helm upgrade --install "${service}-${namespace}" /root/config/cluster-services/cluster-service -n "$namespace" -f "/root/config/cluster-services/cluster-service/values.yaml"
+    fi
+
+    if [ "$DRY_RUN" = "true" ]; then
+        helm upgrade --install "${service}-${namespace}" /root/config/cluster-services/cluster-service -n "$namespace" -f "/root/config/cluster-services/cluster-service/values.yaml" --dry-run
+    fi
+
+
+
+    # Print parsed value
 
 
 
@@ -90,9 +182,11 @@ apply-service(){
 
 
 
-
-
 run_func() {
+
+
+    echo "$@"
+
     if [ $# -lt 1 ]; then
         echo "Usage: call_func <function_name> [args...]"
         return 1

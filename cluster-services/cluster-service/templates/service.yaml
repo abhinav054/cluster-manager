@@ -4,12 +4,15 @@ metadata:
   name: {{ include "cluster-service.fullname" . }}
   labels:
     {{- include "cluster-service.labels" . | nindent 4 }}
+  annotations:
     {{ if eq .Values.service.type "LoadBalancer" }}
       service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
       service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
       service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol: http
       service.beta.kubernetes.io/aws-load-balancer-subnets: {{ .Values.service.subnets }}
+      {{- if .Values.service.sourceRanges }}
       service.beta.kubernetes.io/load-balancer-source-ranges: {{ .Values.service.sourceRanges }}
+      {{ end }}
     {{ end }}
 spec:
   type: {{ .Values.service.type }}
@@ -20,4 +23,6 @@ spec:
       name: http
   selector:
     {{- include "cluster-service.selectorLabels" . | nindent 4 }}
+  {{ if eq  .Values.service.type "LoadBalancer" }}
   loadBalancerClass: "service.k8s.aws/nlb"
+  {{ end }}

@@ -1,282 +1,285 @@
-#!/usr/bin/env bash
+#!/bin/bash
+
 set -euo pipefail
 
-name_value=""
+# name_value=""
 
-# New args after removing target
-new_args=()
+# # New args after removing target
+# new_args=()
 
-config_file=""
+# config_file=""
 
-allfunctions="eksctl-apply-extra-addons eksctl-apply-nodegroups eksctl-create-cluster eksctl-delete-cluster get-monitoring get-nodegroups get-nodes get-namespaces get-pods get-describe-pods get-deployments get-services logs get-shell apply-service delete-service restart-service commit-envs apply-job get-jobs apply-cron-job"
+# allfunctions="eksctl-apply-extra-addons eksctl-apply-nodegroups eksctl-create-cluster eksctl-delete-cluster get-monitoring get-nodegroups get-nodes get-namespaces get-pods get-describe-pods get-deployments get-services logs get-shell apply-service delete-service restart-service commit-envs apply-job get-jobs apply-cron-job"
 
-clusterfunctions="eksctl-apply-extra-addons eksctl-apply-nodegroups eksctl-create-cluster eksctl-delete-cluster get-monitoring get-nodegroups get-nodes get-namespaces"
+# clusterfunctions="eksctl-apply-extra-addons eksctl-apply-nodegroups eksctl-create-cluster eksctl-delete-cluster get-monitoring get-nodegroups get-nodes get-namespaces"
 
-servicesfunctions="get-pods get-describe-pods get-deployments get-services logs get-shell apply-service delete-service restart-service commit-envs apply-job get-jobs apply-cron-job"
+# servicesfunctions="get-pods get-describe-pods get-deployments get-services logs get-shell apply-service delete-service restart-service commit-envs apply-job get-jobs apply-cron-job"
 
-echo "start parsing the args ..."
+# echo "start parsing the args ..."
 
-new_args+=("$1")
+# new_args+=("$1")
 
-cmd=""
+# cmd=""
 
-if [[ -n "$1" ]]; then
-    echo "parsing command ..."
-    cmd="$1"
-    shift
-fi
+# if [[ -n "$1" ]]; then
+#     echo "parsing command ..."
+#     cmd="$1"
+#     shift
+# fi
 
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        -f)
-          new_args+=("$1")
-          if [[ -n "$2" ]]; then
-            case "$2" in
-                /*)
-                 filename="${2##*/}"
-                 new_args+=("$filename") 
-                ;;
-                ./*)
-                 filename="${2##*/}"
-                 new_args+=("$filename")
-                ;;
-                *)
-                 new_args+=("$2")
-                ;;
-            esac
-            config_file="$2"
-            shift 2
-          fi
-          ;;
-        *)
-            new_args+=("$1")
-            shift
-            ;;
-    esac
-done
+# while [[ $# -gt 0 ]]; do
+#     case "$1" in
+#         -f)
+#           new_args+=("$1")
+#           if [[ -n "$2" ]]; then
+#             case "$2" in
+#                 /*)
+#                  filename="${2##*/}"
+#                  new_args+=("$filename") 
+#                 ;;
+#                 ./*)
+#                  filename="${2##*/}"
+#                  new_args+=("$filename")
+#                 ;;
+#                 *)
+#                  new_args+=("$2")
+#                 ;;
+#             esac
+#             config_file="$2"
+#             shift 2
+#           fi
+#           ;;
+#         *)
+#             new_args+=("$1")
+#             shift
+#             ;;
+#     esac
+# done
 
-CONFIG_DIR="/home/oem/test"
+# CONFIG_DIR="/home/oem/test"
 
-rm -rf "$CONFIG_DIR"
-mkdir -p "$CONFIG_DIR"
+# rm -rf "$CONFIG_DIR"
+# mkdir -p "$CONFIG_DIR"
 
-if [[ -n "$cmd" ]]; then
-    echo "command extracted ${cmd}"
-    if [[ "$allfunctions" == *"$cmd"* ]]; then
-        if [[ "$clusterfunctions" == *"$cmd"* ]]; then
-            echo "loading files for cluster function ${cmd}"
-            case "$config_file" in
-            /*)
-                echo "Starts with / (absolute path)"
-                # check if the config file exists
-                if [[ ! -f "$config_file" ]]; then
-                    echo "cluster.yaml not found, exiting ..."
-                    exit 1
-                fi
-                ;;
-            ./*)
-                if [[ -f "$(pwd)/${config_file#./}" ]]; then
-                    config_file="$(pwd)/${config_file#./}"
-                else
-                    echo "cluster.yaml not found, exiting ..."
-                    exit 1
-                fi
-                ;;
-            *)
-                echo "Does not start with / or ."
-                if [[ -f "$(pwd)/${config_file}" ]]; then
-                    config_file="$(pwd)/${config_file}"
-                else
-                    echo "cluster.yaml not found, exiting ..."
-                    exit 1
-                fi
-                ;;
-            esac
+# if [[ -n "$cmd" ]]; then
+#     echo "command extracted ${cmd}"
+#     if [[ "$allfunctions" == *"$cmd"* ]]; then
+#         if [[ "$clusterfunctions" == *"$cmd"* ]]; then
+#             echo "loading files for cluster function ${cmd}"
+#             case "$config_file" in
+#             /*)
+#                 echo "Starts with / (absolute path)"
+#                 # check if the config file exists
+#                 if [[ ! -f "$config_file" ]]; then
+#                     echo "cluster.yaml not found, exiting ..."
+#                     exit 1
+#                 fi
+#                 ;;
+#             ./*)
+#                 if [[ -f "$(pwd)/${config_file#./}" ]]; then
+#                     config_file="$(pwd)/${config_file#./}"
+#                 else
+#                     echo "cluster.yaml not found, exiting ..."
+#                     exit 1
+#                 fi
+#                 ;;
+#             *)
+#                 echo "Does not start with / or ."
+#                 if [[ -f "$(pwd)/${config_file}" ]]; then
+#                     config_file="$(pwd)/${config_file}"
+#                 else
+#                     echo "cluster.yaml not found, exiting ..."
+#                     exit 1
+#                 fi
+#                 ;;
+#             esac
 
-            if [[ -f "$config_file" ]]; then
+#             if [[ -f "$config_file" ]]; then
 
-                echo "Got config at $config_file"
-                # check if the gitwebhook is enabled
-                keyfile=$(yq '.extraAddons[] | select(.name == "git-webhook") | .config.git_key_path' "$config_file")
-                configfilename=$(basename "$config_file")
-                tmp_config_file="${CONFIG_DIR}/${configfilename}"
-                cat "$config_file" > "$tmp_config_file"
+#                 echo "Got config at $config_file"
+#                 # check if the gitwebhook is enabled
+#                 keyfile=$(yq '.extraAddons[] | select(.name == "git-webhook") | .config.git_key_path' "$config_file")
+#                 configfilename=$(basename "$config_file")
+#                 tmp_config_file="${CONFIG_DIR}/${configfilename}"
+#                 cat "$config_file" > "$tmp_config_file"
                 
-                if [[ -n "$keyfile" && "$keyfile" != "null" ]]; then
+#                 if [[ -n "$keyfile" && "$keyfile" != "null" ]]; then
 
-                    case "$keyfile" in
-                        /*)
-                        if [[ ! -f "$keyfile" ]]; then
-                            echo "key for keyfile not found, exiting ..."
-                            exit 1
-                        fi
-                        ;;
-                        ./*)
-                        keyfile="${keyfile#./}"
-                        if [[ ! -f "$(pwd)/${keyfile}" ]]; then
-                            echo "key for keyfile not found, exiting ..."
-                            exit 1
-                        fi
-                        ;;
-                        *)
-                        echo "Looking for keyfile at $(pwd)/${keyfile}"
-                        if [[ -f "$(pwd)/${keyfile}" ]]; then
-                            keyfile="$(pwd)/${keyfile}"
-                        else
-                            echo "key for keyfile not found, exiting ..."
-                            exit 1
-                        fi
-                        ;;
-                    esac
+#                     case "$keyfile" in
+#                         /*)
+#                         if [[ ! -f "$keyfile" ]]; then
+#                             echo "key for keyfile not found, exiting ..."
+#                             exit 1
+#                         fi
+#                         ;;
+#                         ./*)
+#                         keyfile="${keyfile#./}"
+#                         if [[ ! -f "$(pwd)/${keyfile}" ]]; then
+#                             echo "key for keyfile not found, exiting ..."
+#                             exit 1
+#                         fi
+#                         ;;
+#                         *)
+#                         echo "Looking for keyfile at $(pwd)/${keyfile}"
+#                         if [[ -f "$(pwd)/${keyfile}" ]]; then
+#                             keyfile="$(pwd)/${keyfile}"
+#                         else
+#                             echo "key for keyfile not found, exiting ..."
+#                             exit 1
+#                         fi
+#                         ;;
+#                     esac
 
-                    keyfilename=$(basename "$keyfile")
-                    echo "Copying keyfile from ${keyfile} to ${CONFIG_DIR}/${keyfilename}"
-                    cat "${keyfile}" > "${CONFIG_DIR}/${keyfilename}"
-                    [[ -f "${CONFIG_DIR}/${keyfilename}" ]] && echo "Copied keyfile sucessfully"
-                    # echo $(ls "${CONFIG_DIR}")
-                    echo "Modifying config file name from $keyfile to $keyfilename"
-                    echo "Verifying the modified path changed from $keyfile to $(yq '.extraAddons[] | select(.name == "git-webhook") | .config.git_key_path' "$tmp_config_file")"
-                    base_y=$keyfilename yq -e -i ' .extraAddons[] | select(.name == "git-webhook") | .config.git_key_path=env(base_y)' "$tmp_config_file"
-                    echo "Verifying the modified path changed from $keyfile to $(yq '.extraAddons[] | select(.name == "git-webhook") | .config.git_key_path' "$tmp_config_file")"
+#                     keyfilename=$(basename "$keyfile")
+#                     echo "Copying keyfile from ${keyfile} to ${CONFIG_DIR}/${keyfilename}"
+#                     cat "${keyfile}" > "${CONFIG_DIR}/${keyfilename}"
+#                     [[ -f "${CONFIG_DIR}/${keyfilename}" ]] && echo "Copied keyfile sucessfully"
+#                     # echo $(ls "${CONFIG_DIR}")
+#                     echo "Modifying config file name from $keyfile to $keyfilename"
+#                     echo "Verifying the modified path changed from $keyfile to $(yq '.extraAddons[] | select(.name == "git-webhook") | .config.git_key_path' "$tmp_config_file")"
+#                     base_y=$keyfilename yq -e -i ' .extraAddons[] | select(.name == "git-webhook") | .config.git_key_path=env(base_y)' "$tmp_config_file"
+#                     echo "Verifying the modified path changed from $keyfile to $(yq '.extraAddons[] | select(.name == "git-webhook") | .config.git_key_path' "$tmp_config_file")"
 
-                else
-                    echo "Github hook not enabled"
-                fi
+#                 else
+#                     echo "Github hook not enabled"
+#                 fi
 
-            else
-                echo "cluster.yaml not found, exiting ..."
-                exit 1
-            fi
-        fi
+#             else
+#                 echo "cluster.yaml not found, exiting ..."
+#                 exit 1
+#             fi
+#         fi
 
-        if [[ "$servicesfunctions" == *"$cmd"* ]]; then
+#         if [[ "$servicesfunctions" == *"$cmd"* ]]; then
 
-            case "$config_file" in
-             /*)
-                echo "Starts with / (absolute path)"
-                if [[ ! -f "$config_file" ]]; then
+#             case "$config_file" in
+#              /*)
+#                 echo "Starts with / (absolute path)"
+#                 if [[ ! -f "$config_file" ]]; then
 
-                    echo "services.yaml not found, exiting ..."
+#                     echo "services.yaml not found, exiting ..."
 
-                fi 
-             ;;
-             ./*)
-                if [[ -f "$(pwd)/${config_file#./}" ]]; then
-                    config_file="$(pwd)/${config_file#./}"
-                else
-                    echo "services.yaml not found, exiting ..."
-                    exit 1
-                fi
-             ;;
-             *)
-                if [[ -f "$(pwd)/${config_file}" ]]; then
-                    config_file="$(pwd)/${config_file}"
-                else
-                    echo "services.yaml not found, exiting ..."
-                    exit 1
-                fi
-             ;;
-            esac
+#                 fi 
+#              ;;
+#              ./*)
+#                 if [[ -f "$(pwd)/${config_file#./}" ]]; then
+#                     config_file="$(pwd)/${config_file#./}"
+#                 else
+#                     echo "services.yaml not found, exiting ..."
+#                     exit 1
+#                 fi
+#              ;;
+#              *)
+#                 if [[ -f "$(pwd)/${config_file}" ]]; then
+#                     config_file="$(pwd)/${config_file}"
+#                 else
+#                     echo "services.yaml not found, exiting ..."
+#                     exit 1
+#                 fi
+#              ;;
+#             esac
 
-            if [[ -f "$config_file" ]]; then
-                declare -A name_count
-                declare -A path_map
+#             if [[ -f "$config_file" ]]; then
+#                 declare -A name_count
+#                 declare -A path_map
 
-                # Loop through namespaces and services using yq
-                namespace_count=$(yq '.namespaces | length' "$config_file")
+#                 # Loop through namespaces and services using yq
+#                 namespace_count=$(yq '.namespaces | length' "$config_file")
 
-                for ((ni=0; ni<namespace_count; ni++)); do
-                    service_count=$(ni_y=$ni  yq ".namespaces[env(ni_y)].services | length" "$config_file")
+#                 for ((ni=0; ni<namespace_count; ni++)); do
+#                     service_count=$(ni_y=$ni  yq ".namespaces[env(ni_y)].services | length" "$config_file")
 
-                    for ((si=0; si<service_count; si++)); do
-                        env_count=$(ni_y=$ni si_y=$si yq ".namespaces[env(ni_y)].services[env(si_y)].envs | length" "$config_file" 2>/dev/null || echo 0)
-                        [[ "$env_count" -eq 0 ]] && continue
+#                     for ((si=0; si<service_count; si++)); do
+#                         env_count=$(ni_y=$ni si_y=$si yq ".namespaces[env(ni_y)].services[env(si_y)].envs | length" "$config_file" 2>/dev/null || echo 0)
+#                         [[ "$env_count" -eq 0 ]] && continue
 
-                        for ((ei=0; ei<env_count; ei++)); do
-                            file=$(ni_y=$ni si_y=$si ei_y=$ei yq -r ".namespaces[env(ni_y)].services[env(si_y)].envs[env(ei_y)]" "$config_file")
-                            [[ "$file" == "null" || -z "$file" ]] && continue
+#                         for ((ei=0; ei<env_count; ei++)); do
+#                             file=$(ni_y=$ni si_y=$si ei_y=$ei yq -r ".namespaces[env(ni_y)].services[env(si_y)].envs[env(ei_y)]" "$config_file")
+#                             [[ "$file" == "null" || -z "$file" ]] && continue
 
-                            # Normalize path
-                            # file="${file%\"}"
-                            # file="${file#\"}"
-                            # if [[ "$file" == /* ]]; then
-                            #     src="$file"
-                            # else
-                            #     src="$(pwd)/$file"
-                            # fi
-                            case $file in
+#                             # Normalize path
+#                             # file="${file%\"}"
+#                             # file="${file#\"}"
+#                             # if [[ "$file" == /* ]]; then
+#                             #     src="$file"
+#                             # else
+#                             #     src="$(pwd)/$file"
+#                             # fi
+#                             case $file in
 
-                                /*)
-                                    src="$file"
-                                ;;
-                                ./*)
-                                    src="$(pwd)/${file#./}"
-                                ;;
-                                *)
-                                    src="$(pwd)/${file}"
-                                ;;
-                            esac
+#                                 /*)
+#                                     src="$file"
+#                                 ;;
+#                                 ./*)
+#                                     src="$(pwd)/${file#./}"
+#                                 ;;
+#                                 *)
+#                                     src="$(pwd)/${file}"
+#                                 ;;
+#                             esac
 
-                            echo "Checking $src..."
-                            if [[ ! -f "$src" ]]; then
-                                echo "❌ Error: Env file not found: $src"
-                                exit 1
-                            fi
+#                             echo "Checking $src..."
+#                             if [[ ! -f "$src" ]]; then
+#                                 echo "❌ Error: Env file not found: $src"
+#                                 exit 1
+#                             fi
 
-                            base=$(basename "$file")
-                            count=${name_count["$base"]:-0}
-                            if [[ $count -gt 0 ]]; then
-                                new_base="${base%.*}_$count.${base##*.}"
-                            else
-                                new_base="$base"
-                            fi
-                            name_count["$base"]=$((count + 1))
+#                             base=$(basename "$file")
+#                             count=${name_count["$base"]:-0}
+#                             if [[ $count -gt 0 ]]; then
+#                                 new_base="${base%.*}_$count.${base##*.}"
+#                             else
+#                                 new_base="$base"
+#                             fi
+#                             name_count["$base"]=$((count + 1))
 
-                            # Copy and update map
-                            echo "Copying $src → $CONFIG_DIR/$new_base"
-                            cp "$src" "$CONFIG_DIR/$new_base"
+#                             # Copy and update map
+#                             echo "Copying $src → $CONFIG_DIR/$new_base"
+#                             cp "$src" "$CONFIG_DIR/$new_base"
 
-                            # Update YAML immediately
-                            ni_y=$ni si_y=$si ei_y=$ei new_base_y=$new_base yq -i ".namespaces[env(ni_y)].services[env(si_y)].envs[env(ei_y)] = env(new_base_y)" "$config_file"
-                        done
-                    done 
-                done
+#                             # Update YAML immediately
+#                             ni_y=$ni si_y=$si ei_y=$ei new_base_y=$new_base yq -i ".namespaces[env(ni_y)].services[env(si_y)].envs[env(ei_y)] = env(new_base_y)" "$config_file"
+#                         done
+#                     done 
+#                 done
 
-                cp "$config_file" "$CONFIG_DIR"
-                echo "✅ All env files processed and YAML updated successfully."
-                echo "📁 Files copied to: $CONFIG_DIR"
-            else
-                echo "services.yaml not found, exiting ..."
-                exit 1
-            fi
-        fi
-    fi
-fi
+#                 cp "$config_file" "$CONFIG_DIR"
+#                 echo "✅ All env files processed and YAML updated successfully."
+#                 echo "📁 Files copied to: $CONFIG_DIR"
+#             else
+#                 echo "services.yaml not found, exiting ..."
+#                 exit 1
+#             fi
+#         fi
+#     fi
+# fi
 
-# load aws creds
+# # load aws creds
 
-AWS_CONFIG_DIR="${HOME}/.aws"
+# AWS_CONFIG_DIR="${HOME}/.aws"
 
-if [ -n "$(ls -A "$AWS_CONFIG_DIR" 2>/dev/null)" ]; then
-    echo "Loading aws config from $AWS_CONFIG_DIR"
-else
-    if [ -n "$SUDO_USER" ]; then
+# if [ -n "$(ls -A "$AWS_CONFIG_DIR" 2>/dev/null)" ]; then
+#     echo "Loading aws config from $AWS_CONFIG_DIR"
+# else
+#     if [ -n "$SUDO_USER" ]; then
         
-        USER_HOME=$(getent passwd "$username" | cut -d: -f6)
-        echo "Found commad run using sudo, looking for aws config in ${USER_HOME}/.aws"
-        if [ -n "$(ls -A ${USER_HOME}/.aws 2>dev/null)" ]; then
-            AWS_CONFIG_DIR="${USER_HOME}/.aws"
+#         USER_HOME=$(getent passwd "$username" | cut -d: -f6)
+#         echo "Found commad run using sudo, looking for aws config in ${USER_HOME}/.aws"
+#         if [ -n "$(ls -A ${USER_HOME}/.aws 2>dev/null)" ]; then
+#             AWS_CONFIG_DIR="${USER_HOME}/.aws"
 
-        else
-            echo "Error: Aws config not found, exiting ..."
-            exit 1
-        fi
+#         else
+#             echo "Error: Aws config not found, exiting ..."
+#             exit 1
+#         fi
 
-    else
-        echo "Not running via sudo"
-    fi
-fi
+#     else
+#         echo "Not running via sudo"
+#     fi
+# fi
 
+CONFIG_DIR="/home/oem/callmatic/callmatic-aws/cluster-creator-container"
 
-docker run --rm -v :/root/.aws -v "$CONFIG_DIR":"/root/config" test-m:latest "${new_args[@]}"
+echo "$@"
 
+docker run --rm -v ~/.aws:/root/.aws -v "$CONFIG_DIR":"/root/config" test-m:latest "$@"
