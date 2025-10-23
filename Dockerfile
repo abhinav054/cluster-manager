@@ -27,15 +27,17 @@ COPY --from=builder /kaniko/executor /kaniko/executor
 
 COPY eksctl /usr/local/bin/eksctl
 
-COPY yq /usr/local/bin/yq
+RUN curl -L "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64" -o /usr/local/bin/yq && chmod +x /usr/local/bin/yq
+
+RUN curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+RUN curl -sLO "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" && tar -xzf eksctl_$(uname -s)_amd64.tar.gz -C /usr/local/bin && rm eksctl_$(uname -s)_amd64.tar.gz
 
 RUN dnf install openssh
 
 RUN dnf install git
 
 RUN mkdir /app
-
-COPY helm /usr/local/bin/helm
 
 COPY cluster-manager.sh /app/cluster-manager.sh
 
