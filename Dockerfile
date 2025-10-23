@@ -41,5 +41,17 @@ RUN mkdir /app
 
 COPY cluster-manager.sh /app/cluster-manager.sh
 
-ENTRYPOINT [""]
+COPY install-git.sh /app/install-git.sh
+
+COPY build-and-push.sh /app/build-and-push.sh
+
+COPY modify-val.sh /app/modify-val.sh
+
+RUN mkdir /dockerfiles
+
+COPY Dockerfile.javascript /dockerfiles/Dockerfile.javascript
+
+COPY Dockerfile.python /dockerfiles/Dockerfile.python
+
+ENTRYPOINT ["sh", "-c", "/app/cluster-manager.sh"]
 

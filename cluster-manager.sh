@@ -38,6 +38,55 @@ set_kubeconfig() {
 
 
 
+apply-service(){
+
+
+    config_file=""
+    name=""
+    service=""
+
+    BUILD_CMD="/app/build-and-push.sh"
+
+    COMMIT_ENVS_CMD="/app/commit-env.sh"
+
+    MODIFY_VAL_CMD="/app/modify-val.sh"
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -f)
+                config_file="$2"
+                shift 2
+                ;;
+            -n)
+                name="$2"
+                shift 2
+                ;;
+            -s)
+                service="$2"
+                shift 2
+                ;;
+            *)
+                echo "Unknown option: $1"
+                exit 1
+                ;;
+        esac
+    done
+
+    echo "Config file: $config_file"
+    echo "Name: $name"
+    echo "Service: $service"
+    
+    sh "$BUILD_CMD" "$config_file" "$name" "$namespace"
+    sh "$COMMIT_ENVS_CMD" "$config_file" "$name" "$namespace"
+    sh "$MODIFY_VAL_CMD" "$config_file" "$name" "$namespace"
+    # Print parsed values
+    
+
+
+
+
+}
 
 
 

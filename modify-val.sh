@@ -8,19 +8,21 @@ name="$2"
 
 namespace="$3"
 
-values_file=""
+values_file="/app/config/cluster-services/cluster-service/values.yaml"
 
-AWS_REGION="${AWS_REGION:-us-east-1}"   # default region if not set
+cluster_name=$(yq " .metadata.cluster " "$config_file")
+
+AWS_REGION=$(yq ' .metadata.region ' "$config_file")   # default region if not set
 SECRET_NAME="${SECRET_NAME:-ecr-pull-secret}"
-NAMESPACE="${NAMESPACE:-default}"
 
 # === GET ACCOUNT ID & LOGIN SERVER ===
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 ECR_SERVER="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
+
 echo "Using AWS Account: ${ACCOUNT_ID}"
 echo "Region: ${AWS_REGION}"
-echo "Namespace: ${NAMESPACE}"
+echo "Namespace: ${namespace}"
 
 # === GET DOCKER LOGIN PASSWORD ===
 echo "Fetching ECR credentials..."
@@ -38,7 +40,7 @@ kubectl create secret docker-registry "${SECRET_NAME}" \
   --docker-server="${ECR_SERVER}" \
   --docker-username="AWS" \
   --docker-password="${PASSWORD}" \
-  --namespace "${NAMESPACE}"
+  --namespace "${NAMESPACE}" --dry-run=client | kubectl apply -f -
 
 echo "✅ ECR pull secret '${SECRET_NAME}' created successfully in namespace '${NAMESPACE}'."
 
@@ -82,8 +84,6 @@ if [[ "$public_lb" == true ]]; then
     service_type="LoadBalancer"
     sourceRanges=$(name_y=$name namespace_y=$namespace yq " .namespaces[] | select( .name == strenv(namespace_y)) | .services[] | select( .name == strenv(name_y)) | .sourceRanges " "$config_file")
     sourceRanges_y=$sourceRanges yq -i " .service.sourceRanges=strenv(sourceRanges_y) " "$values_file"
-
-    cluster_name=$(yq " .metadata.cluster " "$config_file")
 
     echo "Getting subnets for cluster $cluster_name";
     # 1. Get the VPC ID of the EKS cluster
@@ -150,6 +150,9 @@ COMMIT=$(git rev-parse HEAD)
 
 deployment_hash="${COMMIT}-${HASH}" yq -i " .deploymentHash=strenv(deployment_hash) " "$values_file"
 
+SECRET_NAME_y=$SECRET_NAME yq -i " .imagePullSecrets=strenv(SECRET_NAME_y) " "$values_file"
+
+image="${ECR_SERVER}/${name}-${namespace}-${cluster}:${COMMIT}" yq -i " .image.repository=strenv(image) " "$values_file"
 
 
 # things to set

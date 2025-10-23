@@ -2,15 +2,36 @@
 
 set -euo pipefail
 
+config_file="$1"
+
+name="$2"
+
+namespace="$3"
+
+cluster=$(yq " .metadata.cluster " "$config_file")
+
 # --- CONFIG ---
-AWS_REGION="${AWS_REGION:-us-east-1}"   # Default region if not provided
-REPO_NAME="${1:-}"                      # Pass repo name as first argument
-DOCKER_CONFIG_PATH="${HOME}/.docker/config.json"
+AWS_REGION=$(yq " .metadata.region " "$config_file")   # Default region if not provided
 
-
-# --- GET ECR CREDENTIALS ---
 ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
 ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+
+REPO_NAME="${name}-${namespace}-${cluster}"                      # Pass repo name as first argument
+DOCKER_CONFIG_PATH="${HOME}/.docker/config.json"
+
+CONFIG_DIR="/app/config"
+
+local dockerfiles_dir="/dockerfiles"
+
+local repo_url=$(name_y=$name namespace_y=$namespace yq " .namespaces[] | select( .name == strenv(namespace_y) ) | .services[] | select( .name == strenv(name_y)) | .repo "  "$config_file")
+local commit=$(name_y=$name namespace_y=$namespace yq " .namespaces[] | select( .name == strenv(namespace_y) ) | .services[] | select( .name == strenv(name_y)) | .type "  "$config_file")            # commit hash or "latest"
+local container_type=$(name_y=$name namespace_y=$namespace yq " .namespaces[] | select( .name == strenv(namespace_y) ) | .services[] | select( .name == strenv(name_y)) | .container "  "$config_file")    # docker | python | javascript
+local build_cmd=$(name_y=$name namespace_y=$namespace yq " .namespaces[] | select( .name == strenv(namespace_y) ) | .services[] | select( .name == strenv(name_y)) | .buildCmd "  "$config_file")         # optional
+local run_cmd=$(name_y=$name namespace_y=$namespace yq " .namespaces[] | select( .name == strenv(namespace_y) ) | .services[] | select( .name == strenv(name_y)) | .cmd "  "$config_file")           # optional
+# path where python/js Dockerfiles are stored
+
+# --- GET ECR CREDENTIALS ---
+
 
 echo "Fetching ECR password..."
 PASSWORD=$(aws ecr get-login-password --region "$AWS_REGION")
@@ -59,14 +80,11 @@ fi
 
 echo "✅ Docker config created successfully at $DOCKER_CONFIG_PATH"
 echo "You can now push to ${ECR_REGISTRY}/${REPO_NAME}"
-local repo_url="$1"
-local commit="$2"            # commit hash or "latest"
-local container_type="$3"    # docker | python | javascript
-local build_cmd="$4"         # optional
-local run_cmd="$5"           # optional
-local dockerfiles_dir="$6"   # path where python/js Dockerfiles are stored
-local image_name="$7"        # final image name (e.g., myrepo/myimage:tag)
-local tmp_dir=""
+
+
+tmp_dir="/repo/${name}"
+
+mkdir -p "$tmp_dir"
 
 echo "=== Cloning repository: $repo_url ==="
 git clone "$repo_url" "$tmp_dir" || {
