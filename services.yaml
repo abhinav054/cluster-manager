@@ -21,8 +21,7 @@ namespaces:
         branch: "main"
         cmd: ""
         buildCmd: ""
-        envs:
-        - "test.env"
+        envs: "test.env,newtest.env"
         mem_requests: "128Mi"
         mem_limits: "128Mi"
         cpu_requests: 0.5
@@ -33,5 +32,19 @@ namespaces:
         sourceRanges: ""
         exposePort: 80
         servicePort: 80
+      - name: testjob
+        type: job
+        container: docker
+        commit: "latest"
+        repo: "git@github.com:abhinav054/busybox-echo.git"
+        branch: "main"
+        cmd: ""
+        buildCmd: ""
+        envs: ""
+        mem_requests: "128Mi"
+        mem_limits: "128Mi"
+        cpu_requests: 0.5
+        cpu_limits: 0.5
+        
 
         

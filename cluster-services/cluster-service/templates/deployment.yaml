@@ -4,6 +4,8 @@ metadata:
   name: {{ include "cluster-service.fullname" . }}
   labels:
     {{- include "cluster-service.labels" . | nindent 4 }}
+  annotations:
+    cluster-manager-deploymenthash: {{ .Values.deploymentHash | trunc 63 | trimSuffix "-"}}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:

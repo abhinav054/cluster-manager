@@ -88,17 +88,14 @@ fi
 echo "✅ Docker config created successfully at $DOCKER_CONFIG_PATH"
 echo "You can now push to ${ECR_REGISTRY}/${REPO_NAME}"
 
-
-
 sh "/app/install-git.sh" "$config_file"
 
 tmp_dir="/repo/${name}"
 
 mkdir -p "$tmp_dir"
 
-
-
 echo "=== Cloning repository: $repo_url ==="
+
 git clone "$repo_url" "$tmp_dir" || {
     echo "❌ Failed to clone repository"
     exit 1

@@ -50,11 +50,19 @@ COPY --chown=0:0 modify-val.sh /app/modify-val.sh
 
 COPY --chown=0:0 commit-env.sh /app/commit-env.sh
 
+RUN mkdir /helm
+
+COPY --chown=0:0 cluster-services /helm/cluster-services
+
 RUN mkdir /dockerfiles
 
 COPY --chown=0:0 Dockerfile.javascript /dockerfiles/Dockerfile.javascript
 
 COPY --chown=0:0 Dockerfile.python /dockerfiles/Dockerfile.python
+
+RUN mkdir /addon-config
+
+COPY --chown=0:0 kube-watch-values.yaml /addon-config/kube-watch-values.yaml
 
 ENTRYPOINT ["/app/cluster-manager.sh"]
 

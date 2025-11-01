@@ -37,7 +37,7 @@ kubectl create secret docker-registry "${SECRET_NAME}" \
   --docker-password="${PASSWORD}" \
   --namespace "${namespace}" --dry-run=client -o yaml | kubectl apply -f -
 
-echo "✅ ECR pull secret '${SECRET_NAME}' created successfully in namespace '${namespace}'."
+echo "✅ ECR pull secret '${SECRET_NAME}' cSECRET_NAME_yreated successfully in namespace '${namespace}'."
 
 # === OPTIONAL: PATCH DEFAULT SERVICE ACCOUNT ===
 # Uncomment below if you want all pods in this namespace to use the secret automatically.
@@ -149,9 +149,9 @@ service_type_y=$service_type yq -i " .service.type=strenv(service_type_y) " "$va
 # servicePort_y=$servicePort yq -i " .readinessProbe.httpGet.port=strenv(servicePort_y) " "$values_file"
 
 # set envconfimap
-configmap_name="${name}-${namespace}" yq -i " .envConfigMap=strenv(configmap_name) " "$values_file"
+configmap_name="${name}-${namespace}-envs" yq -i " .envConfigMap=strenv(configmap_name) " "$values_file"
 
-HASH=$(kubectl get configmap "${name}-${namespace}" -n "$namespace" -o jsonpath='{.data}' | sha256sum | awk '{print $1}')
+HASH=$(kubectl get configmap "${name}-${namespace}-envs" -n "$namespace" -o jsonpath='{.data}' | sha256sum | awk '{print $1}')
 
 tmp_dir="/repo/${name}"
 

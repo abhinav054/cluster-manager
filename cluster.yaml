@@ -74,3 +74,10 @@ extraAddons:
   - name: aws-lb-controller
   - name: cluster-autoscaler
   - name: kube-prometheus
+  - name: kube-watch
+    config:
+      channels:
+        - name: "slack"
+          config:
+           channel: ""
+           token : ""
